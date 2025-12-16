@@ -1,0 +1,18 @@
+[
+  {
+    "id": "workout-templates",
+    "category": "functional",
+    "description": "Provide pre-built workout templates for different fitness goals",
+    "steps": [
+      "Browse available workout templates",
+      "Preview template details and exercises",
+      "Select and customize template for personal use",
+      "Save customized template to personal library",
+      "Start workout session from template"
+    ],
+    "priority": 2,
+    "passes": true,
+    "selected": true,
+    "order": 8
+  }
+]

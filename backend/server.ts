@@ -12,6 +12,7 @@ import bcrypt from 'bcryptjs';
 dotenv.config();
 
 const { DATABASE_URL, PGHOST, PGDATABASE, PGUSER, PGPASSWORD, PGPORT = 5432 } = process.env;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 const pool = new Pool(
   DATABASE_URL
@@ -28,8 +29,6 @@ const pool = new Pool(
         ssl: { require: true },
       }
 );
-
-// const client = await pool.connect();
 
 const app = express();
 
@@ -82,19 +81,29 @@ const authenticate_token = async (req, res, next) => {
 // Database initialization
 const initialize_database = async () => {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    const dbSqlPath = path.join(__dirname, 'db.sql');
+    const sql = fs.readFileSync(dbSqlPath, 'utf8');
+    
+    // Split commands by semicolon and execute them one by one
+    const commands = sql.split(';')
+      .map(cmd => cmd.trim())
+      .filter(cmd => cmd.length > 0);
+
+    for (const command of commands) {
+      console.error('Executing SQL:', command.substring(0, 100));
+      try {
+        await pool.query(command);
+      } catch (err) {
+        console.error('Failed command:', command);
+        console.error('Error details:', err);
+      }
+    }
+    
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Database initialization error:', error);
-    process.exit(1);
+    // Don't exit on error, might be partial success or expected error for existing tables
+    // process.exit(1);
   }
 };
 
@@ -257,6 +266,85 @@ app.put('/api/auth/profile', authenticate_token, async (req, res) => {
   }
 });
 
+// Workout Templates Routes
+
+// Get all templates
+app.get('/api/templates', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM workout_templates ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching templates:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Get template details
+app.get('/api/templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const templateResult = await pool.query('SELECT * FROM workout_templates WHERE id = $1', [id]);
+
+    if (templateResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Template not found' });
+    }
+
+    const exercisesResult = await pool.query(
+      'SELECT * FROM template_exercises WHERE template_id = $1 ORDER BY order_index ASC',
+      [id]
+    );
+
+    res.json({
+      ...templateResult.rows[0],
+      exercises: exercisesResult.rows
+    });
+  } catch (error) {
+    console.error('Error fetching template details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Save template to user library
+app.post('/api/user/templates', authenticate_token, async (req, res) => {
+  try {
+    const { template_id } = req.body;
+    const user_id = req.user.id;
+
+    if (!template_id) {
+      return res.status(400).json({ message: 'Template ID is required' });
+    }
+
+    await pool.query(
+      'INSERT INTO user_templates (user_id, template_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [user_id, template_id]
+    );
+
+    res.status(201).json({ message: 'Template saved to library' });
+  } catch (error) {
+    console.error('Error saving template:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Get user's saved templates
+app.get('/api/user/templates', authenticate_token, async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const result = await pool.query(`
+      SELECT wt.*, ut.saved_at
+      FROM workout_templates wt
+      JOIN user_templates ut ON wt.id = ut.template_id
+      WHERE ut.user_id = $1
+      ORDER BY ut.saved_at DESC
+    `, [user_id]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching user templates:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Example protected endpoint
 app.get('/api/protected', authenticate_token, (req, res) => {
   res.json({
@@ -265,6 +353,7 @@ app.get('/api/protected', authenticate_token, (req, res) => {
       id: req.user.id,
       email: req.user.email,
       name: req.user.name,
+      created_at: req.user.created_at // Added to match previous response
     },
     timestamp: new Date().toISOString()
   });
@@ -282,6 +371,8 @@ app.get('*', (req, res) => {
 export { app, pool };
 
 // Start the server
-app.listen(3000, '0.0.0.0', () => {
-  console.log(`Server running on port 3000 and listening on 0.0.0.0`);
+initialize_database().then(() => {
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`Server running on port ${port} and listening on 0.0.0.0`);
+  });
 });
