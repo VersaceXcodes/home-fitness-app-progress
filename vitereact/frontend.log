@@ -1,0 +1,18 @@
+
+> conductor@0.0.0 dev
+> vite
+
+
+  VITE v5.4.19  ready in 314 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.20.0.168:5173/
+Error: The following dependencies are imported but could not be resolved:
+
+  zustand (imported by /app/vitereact/src/store/main.tsx)
+  zustand/middleware (imported by /app/vitereact/src/store/main.tsx)
+
+Are they installed?
+    at file:///app/vitereact/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:50669:15
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/vitereact/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:50174:26

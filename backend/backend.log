@@ -1,0 +1,28 @@
+
+> backend@1.0.0 dev
+> tsx server.ts
+
+Executing SQL: -- DROP TABLES TO ENSURE CLEAN SLATE
+DROP TABLE IF EXISTS user_templates CASCADE
+Executing SQL: DROP TABLE IF EXISTS template_exercises CASCADE
+Executing SQL: DROP TABLE IF EXISTS workout_templates CASCADE
+Executing SQL: DROP TABLE IF EXISTS users CASCADE
+Executing SQL: -- COMMANDS FOR DB TABLES
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email VARCHA
+Executing SQL: CREATE TABLE IF NOT EXISTS workout_templates (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL
+Executing SQL: CREATE TABLE IF NOT EXISTS template_exercises (
+  id SERIAL PRIMARY KEY,
+  template_id INTEGER REFER
+Executing SQL: CREATE TABLE IF NOT EXISTS user_templates (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES us
+Executing SQL: -- COMMANDS FOR DB SEED
+INSERT INTO workout_templates (name, description, category, difficulty, dura
+Executing SQL: INSERT INTO template_exercises (template_id, exercise_name, sets, reps, rest_seconds, order_index)
+V
+Database initialized successfully
+Server running on port 3000 and listening on 0.0.0.0
